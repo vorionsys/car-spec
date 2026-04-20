@@ -1,0 +1,40 @@
+{
+  "name": "@vorionsys/car-spec",
+  "version": "1.0.0",
+  "description": "OpenAPI 3.1.0 specification for the Vorion Categorical Agentic Registry (CAR) and Trust Engine API",
+  "main": "openapi.yaml",
+  "files": [
+    "openapi.yaml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "validate": "npx --yes @redocly/cli lint openapi.yaml"
+  },
+  "keywords": [
+    "openapi",
+    "specification",
+    "car",
+    "categorical-agentic-registry",
+    "vorion",
+    "ai",
+    "agent",
+    "governance",
+    "trust",
+    "identity",
+    "basis"
+  ],
+  "author": "Vorion LLC <team@vorion.org>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vorionsys/car-spec.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vorionsys/basis-spec/discussions"
+  },
+  "homepage": "https://github.com/vorionsys/car-spec#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
