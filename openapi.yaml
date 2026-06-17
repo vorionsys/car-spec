@@ -9,6 +9,15 @@ info:
     access control, capability ceilings, and gaming detection. Trust scores are
     runtime-computed metrics and are NOT part of CAR identity (see ADR-004).
 
+    ## Trust Tiers
+    The canonical trust model is the 8-tier `CanonicalTrustTier` lattice
+    (T0 Sandbox .. T7 Autonomous, score space 0-1000) defined by
+    TrustSpec@1.0.0. The legacy 5-value `TrustTier`
+    (UNKNOWN..PRIVILEGED) is a DEPRECATED surface encoding that projects onto
+    that lattice. The observation/assurance axis
+    (BLACK_BOX..VERIFIED_BOX) is ORTHOGONAL: it is a ceiling that caps the
+    achievable tier, never a trust tier itself -- the two are never conflated.
+
     ## Authentication
     All endpoints require authentication via Bearer token or API key.
 
@@ -921,14 +930,53 @@ components:
 
     TrustTier:
       type: string
+      deprecated: true
       enum: [UNKNOWN, BASIC, VERIFIED, TRUSTED, PRIVILEGED]
       description: |
-        Trust tier levels:
+        DEPRECATED LEGACY SURFACE ENCODING. This 5-value tier is the legacy
+        API encoding only. The canonical trust model is the 8-tier T0..T7
+        lattice (score space 0-1000) defined by TrustSpec@1.0.0; see
+        `CanonicalTrustTier`. This enum is retained for backward compatibility
+        and is reconciled to the canonical lattice by a frozen, conservative
+        floor projection (a coarse CAR band maps to the lowest T-tier it
+        guarantees, so a legacy claim can never over-grant):
+          - UNKNOWN    -> T0 (Sandbox)    : Unverified agent
+          - BASIC      -> T1 (Observed)    : Basic verification completed
+          - VERIFIED   -> T3 (Monitored)   : Identity verified (CT-ID required from T3)
+          - TRUSTED    -> T5 (Trusted)     : Established trust history
+          - PRIVILEGED -> T6 (Certified)   : Highest legacy trust level
+        Note: PRIVILEGED maps to T6, NOT T7 -- T7 (Autonomous) is not grantable
+        by an identity-class label alone. Rewiring the existing $refs to
+        `CanonicalTrustTier` is a later, windowed (breaking) migration and is
+        out of scope for this deprecation.
+
+        Trust tier levels (legacy):
         - UNKNOWN: Unverified agent
         - BASIC: Basic verification completed
         - VERIFIED: Identity verified
         - TRUSTED: Established trust history
         - PRIVILEGED: Highest trust level
+
+    CanonicalTrustTier:
+      type: string
+      enum: [T0, T1, T2, T3, T4, T5, T6, T7]
+      description: |
+        Canonical trust lattice (TrustSpec@1.0.0). A total order of 8 tiers,
+        T0..T7, derived from a trust score in the space 0-1000. This is the
+        normative trust model; the legacy 5-value `TrustTier` is a deprecated
+        surface encoding that projects onto this lattice.
+          - T0 Sandbox     (score 0-199)    : no external effects
+          - T1 Observed    (score 200-349)  : read-only, monitored
+          - T2 Provisional (score 350-499)  : limited write, scoped tools
+          - T3 Monitored   (score 500-649)  : standard ops, audit; CT-ID required from T3
+          - T4 Standard    (score 650-799)  : full operational capability
+          - T5 Trusted     (score 800-875)  : cross-system operations
+          - T6 Certified   (score 876-950)  : multi-agent coordination
+          - T7 Autonomous  (score 951-1000) : full autonomous operation
+        The observation/assurance axis (BLACK_BOX, GRAY_BOX, WHITE_BOX,
+        ATTESTED_BOX, VERIFIED_BOX) is ORTHOGONAL to this lattice: it acts as a
+        ceiling that caps the achievable trust tier and is NOT itself a trust
+        tier. The two axes must never be conflated or aliased.
 
     AgentRole:
       type: string
