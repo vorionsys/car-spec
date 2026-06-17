@@ -1,5 +1,8 @@
 # @vorionsys/car-spec
 
+[![CI](https://img.shields.io/github/actions/workflow/status/vorionsys/car-spec/ci.yml)](https://github.com/vorionsys/car-spec/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
+
 OpenAPI 3.1.0 specification for the **Categorical Agentic Registry (CAR)** and **Trust Engine** API -- the machine-readable contract that every Vorion SDK, CLI, and integration is built from.
 
 ## What is CAR?
