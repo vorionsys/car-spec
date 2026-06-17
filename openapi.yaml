@@ -18,6 +18,14 @@ info:
     (BLACK_BOX..VERIFIED_BOX) is ORTHOGONAL: it is a ceiling that caps the
     achievable tier, never a trust tier itself -- the two are never conflated.
 
+    ## Provenance integrity
+    Provenance records SHOULD be signed by the agent/runtime controller
+    (`controllerSignature`: Ed25519, or ECDSA-P384 for FIPS / sovereign) over their
+    JCS-canonical bytes, binding the signing algorithm and key id. Verification is
+    FAIL-CLOSED: an unsigned record, an unknown signer, or a bad signature is
+    UNTRUSTED for trust decisions. The legacy server-fabricated `signature` field is
+    DEPRECATED -- the server attesting its own records proves nothing.
+
     ## Authentication
     All endpoints require authentication via Bearer token or API key.
 
@@ -1201,6 +1209,38 @@ components:
                 type: string
                 format: date-time
 
+    ProvenanceSignature:
+      type: object
+      required: [algorithm, signerKeyId, value]
+      description: >-
+        A controller-produced detached signature over the JCS-canonical bytes of a
+        provenance record. The signed bytes MUST include the record's content fields
+        AND this object's `algorithm` and `signerKeyId`, so neither can be downgraded
+        or swapped without invalidating the signature. Verification is FAIL-CLOSED:
+        any failure (unknown signer, bad signature, unsupported algorithm,
+        non-canonical bytes) makes the record UNTRUSTED.
+      properties:
+        algorithm:
+          type: string
+          enum: [Ed25519, ECDSA-P384]
+          description: >-
+            Signature algorithm. ECDSA-P384 is the FIPS-140-3 / CMVP profile for
+            sovereign / regulated deployments; Ed25519 is the default.
+        signerKeyId:
+          type: string
+          description: >-
+            Key identifier (`kid`) of the controller key. The verifier resolves it
+            to a public key out-of-band; an unresolvable or unknown `kid` makes the
+            record UNTRUSTED.
+        value:
+          type: string
+          description: Detached signature over the JCS-canonical signed bytes, base64url-encoded (unpadded).
+        canonicalization:
+          type: string
+          enum: [JCS]
+          default: JCS
+          description: Canonicalization applied to the signed bytes (RFC 8785 JSON Canonicalization Scheme).
+
     ProvenanceRecord:
       type: object
       properties:
@@ -1223,10 +1263,21 @@ components:
           format: uuid
         merkleRoot:
           type: string
-          description: Merkle tree root for integrity verification
+          pattern: '^[0-9a-f]{64}$'
+          description: >-
+            Hex SHA-256 chain anchor for this record, computed deterministically over
+            the JCS-canonical record bytes. The verifier MUST recompute and check it;
+            a non-matching or absent root makes the record UNTRUSTED.
         signature:
           type: string
-          description: Cryptographic signature
+          deprecated: true
+          description: >-
+            DEPRECATED. Legacy free-form signature historically fabricated
+            server-side; it attests nothing about the controller. Superseded by
+            `controllerSignature`. A record without a verified `controllerSignature`
+            is UNTRUSTED for trust decisions regardless of this field.
+        controllerSignature:
+          $ref: '#/components/schemas/ProvenanceSignature'
         timestamp:
           type: string
           format: date-time
@@ -1249,6 +1300,19 @@ components:
         parentId:
           type: string
           format: uuid
+        controllerSignature:
+          allOf:
+            - $ref: '#/components/schemas/ProvenanceSignature'
+          description: >-
+            RECOMMENDED. The agent/runtime controller's signature over the
+            JCS-canonical record bytes (binding `type`, `agentId`, `decision`,
+            `context`, `parentId`, `merkleRoot`, `timestamp`, and the signature's own
+            `algorithm` + `signerKeyId`). When present the server MUST verify it
+            FAIL-CLOSED: an unknown signer, a bad signature, or an unsupported
+            algorithm makes the request rejected (4xx) -- never recorded as trusted.
+            When absent the record is stored UNSIGNED and is UNTRUSTED for trust
+            decisions; server-fabricated integrity fields are deprecated and slated
+            for removal.
 
     GamingAlert:
       type: object
